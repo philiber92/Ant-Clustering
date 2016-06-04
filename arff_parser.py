@@ -15,7 +15,10 @@ class ArffParser:
         return self.__data['data']
 
     def get_data_matrix(self):
-        return np.matrix(self.__data['data'])
+        data_list = []
+        for point in self:
+            data_list.append(point)
+        return np.matrix(data_list)
 
     def count_dimensions(self):
         # using of class labels is forbidden
