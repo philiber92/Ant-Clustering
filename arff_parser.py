@@ -41,3 +41,6 @@ class ArffParserIter:
             return curr_data[:-1]
         else:
             raise StopIteration()
+
+    def next(self):
+        return self.__next__()
