@@ -10,7 +10,7 @@ class ant:
         self.reactor_num = 0
         
     def pick_object(self, object_to_pick):
-        if (self.loaded_object == None):
+        if (self.isloaded == False):
             self.loaded_object = object_to_pick
             self.isloaded = True
     
@@ -123,8 +123,6 @@ class ant_clusterer:
         #self.ant_reactor_index = []
         
     def initialize(self):
-        num_data = self.data.size
-        
         # create all data in numpy.array without last element
         new_data = []
         for datum in range(0,len(data)):
@@ -134,19 +132,22 @@ class ant_clusterer:
         
         self.data = np.array([np.array(datum) for datum in new_data])          
         
+        num_data = self.data.size / self.data[0].size       
+        print("num data", num_data)
+        
         # random amount of reactor K <= number of data
         k = rand.randint(1, num_data)
         print(k)        
         
         # create reactors
         for i in range(0, k):
-            self.reactors.append([])
+            self.reactors.append(reactor(self.alpha))
         print(len(self.reactors))
         
         # assign data at random to reactors
         for x in self.data:
             k = rand.randint(0, len(self.reactors) - 1)
-            self.reactors[k].append(x)
+            self.reactors[k].push_obj(x)
             
         #create ants
         for i in range(0, self.number_ants):
@@ -159,18 +160,20 @@ class ant_clusterer:
             tmp.reactor_num = self.start_reactor_index
         
     def iterations(self):
-        print(self.start_reactor_index)
         
-        for i in range(0, self.num_iterations):
+        for iteration in range(0, self.num_iterations):
             for tmp in self.ants:
                 #if unloaeded check number of objects
                 if tmp.get_load_state() == False:
+#                    print("is unloaded")
+#                    tmp.print_state()
+#                    self.print_data_amount()
                     # if more than one take most dissimilar
-                    if (len(self.reactors[tmp.reactor_num]) > 1):
-                        # check if reactors can be combined
+                    if (self.reactors[tmp.reactor_num].get_reactor_length() > 1):
+                        # before, check if reactors can be combined
                         for reactor_index in range(0,len(self.reactors)):
-                            if(reactor_index != tmp.reactor_num & len(self.reactors[reactor_index]) > 0):
-                                reactor_sim = self.reactor_similarity(self.reactors[tmp.reactor_num], self.reactors[reactor_index])
+                            if(reactor_index != tmp.reactor_num & self.reactors[reactor_index].get_reactor_length() > 0):
+                                reactor_sim = self.reactor_similarity(self.reactors[tmp.reactor_num].get_reactor_center(), self.reactors[reactor_index].get_reactor_center())
                                 #print("reactor_sim",reactor_sim)
                                 
                                 # calculate combine_probability
@@ -187,43 +190,35 @@ class ant_clusterer:
                                         self.combine_reactors(tmp.reactor_num, reactor_index)
                                         
                                 
-                        # make similarity list
-                        similarity_list = []
-                        for object_index in range(0, len(self.reactors[tmp.reactor_num])):
-                            sim = self.average_similarity(tmp.reactor_num, object_index)
-                            similarity_list.append([sim, object_index])
-                        similarity_list.sort()
-                        # most dissimilar object is now first
-                        
+                        # find most dissimilar object
+                        sim, dissim_index = self.reactors[tmp.reactor_num].find_most_dissimilar()
+                                                
                         # calculate probability to pick up
-                        prob = self.kp / (self.kp + similarity_list[0][0])
+                        prob = self.kp / (self.kp + sim)
                         prob = prob * prob
                         ran = rand.random()
                         
                         if(ran < prob):
-                            #print("picked up")
-                            tmp.pick_object(self.reactors[tmp.reactor_num].pop(similarity_list[0][1]))
-                            #del self.reactors[tmp.reactor_num][similarity_list[0][1]]
-                            
-                        #print("similarity",similarity_list[0], "rest length: ", len(self.reactors[tmp.reactor_num]))
-                            
+                            tmp.pick_object(self.reactors[tmp.reactor_num].pop_obj(dissim_index))
+                           
                     #if only one object then take it
-                    if (len(self.reactors[tmp.reactor_num]) == 1):
-                        tmp.pick_object(self.reactors[tmp.reactor_num].pop(0))
-                        #del self.reactors[tmp.reactor_num][0]
-                        #maybe destroy reactor cause no data is in and will be
-                        #del self.reactors[tmp.reactor_num]
+                    elif (self.reactors[tmp.reactor_num].get_reactor_length() == 1):
+                        tmp.pick_object(self.reactors[tmp.reactor_num].pop_obj(0))
+                        
                   
                 
-                if tmp.isloaded == True:
+                elif tmp.isloaded == True:
+#                    print("is loaded")
+#                    tmp.print_state()
+#                    self.print_data_amount()
                     # put only to reactor with more than one object
-                    if(len(self.reactors[tmp.reactor_num]) > 1):
-                        self.reactors[tmp.reactor_num].append(tmp.put_object())
+                    if(self.reactors[tmp.reactor_num].get_reactor_length() > 1):
+                        self.reactors[tmp.reactor_num].push_obj(tmp.put_object())
 
                         # check if reactors can be combined
                         for reactor_index in range(0,len(self.reactors)):
-                            if(reactor_index != tmp.reactor_num & len(self.reactors[reactor_index]) > 0):
-                                reactor_sim = self.reactor_similarity(self.reactors[tmp.reactor_num], self.reactors[reactor_index])
+                            if(reactor_index != tmp.reactor_num & self.reactors[reactor_index].get_reactor_length() > 0):
+                                reactor_sim = self.reactor_similarity(self.reactors[tmp.reactor_num].get_reactor_center(), self.reactors[reactor_index].get_reactor_center())
                                 #print("reactor_sim",reactor_sim)
                                 
                                 # calculate combine_probability
@@ -238,84 +233,70 @@ class ant_clusterer:
                                     ran = rand.random()
                                     if(ran < combine_prob):
                                         self.combine_reactors(tmp.reactor_num, reactor_index)
+                                             
+                        
+                        # find most dissimilar object
+                        sim, dissim_index = self.reactors[tmp.reactor_num].find_most_dissimilar()
                                                 
-                        
-                        # and pick most dissimilar with prob
-                        similarity_list = []
-                        for object_index in range(0, len(self.reactors[tmp.reactor_num])):
-                            sim = self.average_similarity(tmp.reactor_num, object_index)
-                            similarity_list.append([sim, object_index])
-                        similarity_list.sort()
-                        # most dissimilar object is now first
-                        
                         # calculate probability to pick up
-                        prob = self.kp / (self.kp + similarity_list[0][0])
+                        prob = self.kp / (self.kp + sim)
                         prob = prob * prob
                         ran = rand.random()
                         
                         if(ran < prob):
-                            #print("picked up")
-                            #print(tmp.isloaded)
-                            tmp.pick_object(self.reactors[tmp.reactor_num].pop(similarity_list[0][1]))
-                            #print(tmp.isloaded)
-                            #del self.reactors[tmp.reactor_num][similarity_list[0][1]]
-                            
-                        #print("similarity",similarity_list[0], "rest length: ", len(self.reactors[tmp.reactor_num]))
-                
+                            tmp.pick_object(self.reactors[tmp.reactor_num].pop_obj(dissim_index))
+                        
+#                tmp.print_state() 
+#                self.print_data_amount()
+#                print("")
             # end for all ants => one Iteration done
             # delete all reactor with no data
 
-            self.reactors = [react for react in self.reactors if len(react) != 0]                    
+            self.reactors = [react for react in self.reactors if react.get_reactor_length() != 0]                    
                 
             # move ants to next reactor  
             for tmp in self.ants:
                 ran = rand.randint(0, len(self.reactors) - 1)
                 tmp.move_to_reactor(ran)                
+                            
+            # after some steps create new reactor with all loaded objects
+            if(iteration %  500 == 499):
+                react = reactor(self.alpha)
+                for tmp in self.ants:
+                    if(tmp.isloaded == True):
+                        react.push_obj(tmp.put_object())
+                if(react.get_reactor_length() > 0):
+                    self.reactors.append(react)
+                print("new reactor created", iteration, react.get_reactor_length())
+                                        
                 
             # debug message
-#            print("iteratio",i)
-#            print("num reactors", len(self.reactors))
-#            data_amount = 0
-#            for n in range(0, len(self.reactors) ):
-#                data_amount = data_amount + len(self.reactors[n])
-#                #print("iteration: ", i, " reactor ", n, "num Data: ", len(self.reactors[n]))
-#            
-#            
-#            
-#            
-#            for tmp in self.ants:
-#                #tmp.print_state()
-#                if tmp.isloaded == True:
-#                    data_amount = data_amount + 1
-#            print("data_amount", data_amount)
+            #print("iteratio",iteration)
+            #self.print_data_amount()
+            
         # end M Iterations
+                
+        print("iteratio",iteration)
+        self.print_data_amount()                
+                
         for i in range(len(self.reactors)):
-            print("reactor ",i , "size:", len(self.reactors[i])  )
-            print(self.reactors[i])
+            print("reactor ",i , "size:", self.reactors[i].get_reactor_length()  )
+            print(self.reactors[i].item_sim_list)
         # after M Iterations all Ants with dataobject build one new reactor
         # if too much reactors combine some (done in every step)
         # Terminate if difference between two Iterations is low enough
         
-    
-# calculate average similarity
-    def average_similarity(self, reactor_num, object_index):
-        reactor = self.reactors[reactor_num]
-        object1 = reactor[object_index]
-        dist = 0
-        summe = 0
-        for object2_index in range(0,len(reactor)):
-            if(object_index != object2_index):
-                dist = self.distance(reactor[object_index], reactor[object2_index]) 
-                #print("dist",dist)
-                summe = summe + 1 - np.sqrt(dist / self.alpha)
-        
-        #print("sum",summe)
-        similarity = 1/(len(reactor) - 1) * summe
-        
-        if(similarity < 0):
-            similarity = 0
-        
-        return similarity
+    def print_data_amount(self):
+        #print("num reactors", len(self.reactors))
+        data_amount = 0
+        for n in range(0, len(self.reactors) ):
+            data_amount = data_amount + self.reactors[n].get_reactor_length()
+            
+        for tmp in self.ants:
+            #tmp.print_state()
+            if tmp.isloaded == True:
+                data_amount = data_amount + 1
+        print("data_amount", data_amount)
         
     def distance(self, object1, object2):
         distance = 0
@@ -325,36 +306,17 @@ class ant_clusterer:
         distance = np.sqrt(distance)
         return distance
     
-    def reactor_similarity(self, reactor1, reactor2):
-        # find reactorcenters (mean value)
-
-        xyz1 = reactor1[0]
-        for n in range(1, len(reactor1)):
-            xyz1 = xyz1 + reactor1[n]
-        xyz1 = xyz1 / len(reactor1)     
-        
-        xyz2 = reactor2[0]
-        for n in range(1, len(reactor2)):
-            xyz2 = xyz2 + reactor2[n]
-        xyz2 = xyz2 / len(reactor2) 
-
+    def reactor_similarity(self, center1, center2):
         # measure distance
-        dist = self.distance(xyz1, xyz2)
+        dist = self.distance(center1, center2)
                 
         # calculate similarity
         sim = 1 - dist / self.alpha1
         return sim
 
     def combine_reactors(self, num_reactor1, num_reactor2):
-        for i in range(0,len(self.reactors[num_reactor2])):
-            self.reactors[num_reactor1].append(self.reactors[num_reactor2].pop())
-    #number_of_data = data.size
-    #init()
-    #dataprojection()
-    #pack_ants()
-    #iteration()
-    #lable_list = 0
-    #return lable_list
+        for i in range(0, self.reactors[num_reactor2].get_reactor_length()):
+            self.reactors[num_reactor1].push_obj(self.reactors[num_reactor2].pop_obj(0))
     
 
 ########################### main ################################
@@ -372,12 +334,13 @@ data, meta = arff.loadarff('./Dataset/iris.arff')
 
 start = time.clock()
 #                      (data, num_iterations, kp, kc, alpha, number_ants, alpha1, s )
-cluster = ant_clusterer(data, 500, 0.1, 0.4, 1.5, 20, 0.3, 3)
+cluster = ant_clusterer(data, 2500, 0.1, 0.4, 1.5, 20, 0.1, 3)
 cluster.initialize()
 cluster.iterations()
 
 end = time.clock()
 print("time needed", end - start)
+
 #new_data = []
 #for datum in range(0,len(data)):
 #    new_data.append([])
