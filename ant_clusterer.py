@@ -33,8 +33,8 @@ class ant:
 class reactor:
     def __init__(self, alpha):
         self.item_sim_list = [] #[sim, obj]
-        self.has_changed = False
-        self.has_center_changed = False
+        self.has_changed = True
+        self.has_center_changed = True
         self.alpha = alpha
         self.center = None
         
@@ -47,10 +47,12 @@ class reactor:
                 dist = self.distance(object1, self.item_sim_list[object2_index][1]) 
                 summe = summe + 1 - np.sqrt(dist / self.alpha)
 
-        similarity = 1/(len(self.item_sim_list) - 1) * summe
+        anzahl = len(self.item_sim_list) - 1
+        faktor = 1.0 /anzahl
+        similarity = summe * (faktor) 
         
-        if(similarity < 0):
-            similarity = 0
+#        if(similarity < 0):
+#            similarity = 0
         
         self.item_sim_list[object_index][0] = similarity
         return similarity
@@ -84,6 +86,16 @@ class reactor:
         self.has_changed = True
         self.has_center_changed = True
         return self.item_sim_list.pop(obj_index)[1]
+
+    def get_similarity_sum(self):
+        sim_sum = 0
+        if(self.has_changed == True):
+            self.find_most_dissimilar()
+        
+        for object_index in range(0, len(self.item_sim_list)):
+            sim_sum = sim_sum + self.item_sim_list[object_index][0]
+        
+        return sim_sum
         
     #returns similarity and index in reactor
     def find_most_dissimilar(self):
@@ -103,6 +115,9 @@ class reactor:
                 if(self.item_sim_list[object_index][0] < min_sim):
                     min_sim = self.item_sim_list[object_index][0]
                     min_index = object_index
+        
+        if(min_sim < 0):
+            min_sim = 0
             
         return(min_sim, min_index)
     
@@ -120,6 +135,7 @@ class ant_clusterer:
         self.reactors = []
         self.ants = []
         self.start_reactor_index = 0
+        self.similarity_sum = 0
         #self.ant_reactor_index = []
         
     def initialize(self):
@@ -162,6 +178,7 @@ class ant_clusterer:
     def iterations(self):
         
         for iteration in range(0, self.num_iterations):
+            #print("iteration", iteration)
             for tmp in self.ants:
                 #if unloaeded check number of objects
                 if tmp.get_load_state() == False:
@@ -172,7 +189,7 @@ class ant_clusterer:
                     if (self.reactors[tmp.reactor_num].get_reactor_length() > 1):
                         # before, check if reactors can be combined
                         for reactor_index in range(0,len(self.reactors)):
-                            if(reactor_index != tmp.reactor_num & self.reactors[reactor_index].get_reactor_length() > 0):
+                            if(reactor_index != tmp.reactor_num and self.reactors[reactor_index].get_reactor_length() > 0):
                                 reactor_sim = self.reactor_similarity(self.reactors[tmp.reactor_num].get_reactor_center(), self.reactors[reactor_index].get_reactor_center())
                                 #print("reactor_sim",reactor_sim)
                                 
@@ -187,6 +204,7 @@ class ant_clusterer:
                                 if combine_prob > 0:
                                     ran = rand.random()
                                     if(ran < combine_prob):
+                                        print("reactor combined", tmp.reactor_num, reactor_index)
                                         self.combine_reactors(tmp.reactor_num, reactor_index)
                                         
                                 
@@ -199,10 +217,12 @@ class ant_clusterer:
                         ran = rand.random()
                         
                         if(ran < prob):
+                            #print("took: ", sim, dissim_index, "from:", tmp.reactor_num)
                             tmp.pick_object(self.reactors[tmp.reactor_num].pop_obj(dissim_index))
                            
                     #if only one object then take it
                     elif (self.reactors[tmp.reactor_num].get_reactor_length() == 1):
+                        #print("took: ", 1, "from:", tmp.reactor_num)
                         tmp.pick_object(self.reactors[tmp.reactor_num].pop_obj(0))
                         
                   
@@ -217,7 +237,7 @@ class ant_clusterer:
 
                         # check if reactors can be combined
                         for reactor_index in range(0,len(self.reactors)):
-                            if(reactor_index != tmp.reactor_num & self.reactors[reactor_index].get_reactor_length() > 0):
+                            if(reactor_index != tmp.reactor_num and self.reactors[reactor_index].get_reactor_length() > 0):
                                 reactor_sim = self.reactor_similarity(self.reactors[tmp.reactor_num].get_reactor_center(), self.reactors[reactor_index].get_reactor_center())
                                 #print("reactor_sim",reactor_sim)
                                 
@@ -232,6 +252,7 @@ class ant_clusterer:
                                 if combine_prob > 0:
                                     ran = rand.random()
                                     if(ran < combine_prob):
+                                        print("reactor combined", tmp.reactor_num, reactor_index)
                                         self.combine_reactors(tmp.reactor_num, reactor_index)
                                              
                         
@@ -244,6 +265,7 @@ class ant_clusterer:
                         ran = rand.random()
                         
                         if(ran < prob):
+                            #print("took: ", sim, dissim_index, "from:", tmp.reactor_num)
                             tmp.pick_object(self.reactors[tmp.reactor_num].pop_obj(dissim_index))
                         
 #                tmp.print_state() 
@@ -256,11 +278,13 @@ class ant_clusterer:
                 
             # move ants to next reactor  
             for tmp in self.ants:
-                ran = rand.randint(0, len(self.reactors) - 1)
-                tmp.move_to_reactor(ran)                
+                ran = (tmp.reactor_num + 1) % len(self.reactors) 
+                #ran = rand.randint(0, len(self.reactors) - 1)
+                #print("move ant",tmp.reactor_num, ran ) 
+                tmp.move_to_reactor(ran)
                             
             # after some steps create new reactor with all loaded objects
-            if(iteration %  500 == 499):
+            if(iteration %  (self.s) == 0 or iteration == self.num_iterations - 1):
                 react = reactor(self.alpha)
                 for tmp in self.ants:
                     if(tmp.isloaded == True):
@@ -270,10 +294,7 @@ class ant_clusterer:
                 print("new reactor created", iteration, react.get_reactor_length())
                                         
                 
-            # debug message
-            #print("iteratio",iteration)
-            #self.print_data_amount()
-            
+            #self.compare_iterations()
         # end M Iterations
                 
         print("iteratio",iteration)
@@ -282,9 +303,33 @@ class ant_clusterer:
         for i in range(len(self.reactors)):
             print("reactor ",i , "size:", self.reactors[i].get_reactor_length()  )
             print(self.reactors[i].item_sim_list)
+            print("")
         # after M Iterations all Ants with dataobject build one new reactor
         # if too much reactors combine some (done in every step)
         # Terminate if difference between two Iterations is low enough
+        
+    def compare_iterations(self):
+        # calc current value of iteration (sum all similarities)
+        sim_sum = 0
+        for react in self.reactors:
+            if(react.get_reactor_length() > 1):
+                sim_sum = sim_sum + react.get_similarity_sum()
+        #print("compare iter: sim_sum ", sim_sum)  
+                
+        # calc difference between this and last iteration
+        diff = abs(sim_sum - self.similarity_sum)
+        #print("compare iter: diff ", diff, sim_sum, self.similarity_sum)
+        
+        if(sim_sum > 0):
+            self.similarity_sum = sim_sum        
+        
+        if(diff < 0.00001):
+            print("small diff between iterations")
+            return True
+            
+        else:
+            return False
+        
         
     def print_data_amount(self):
         #print("num reactors", len(self.reactors))
@@ -334,30 +379,11 @@ data, meta = arff.loadarff('./Dataset/iris.arff')
 
 start = time.clock()
 #                      (data, num_iterations, kp, kc, alpha, number_ants, alpha1, s )
-cluster = ant_clusterer(data, 2500, 0.1, 0.4, 1.5, 20, 0.1, 3)
+cluster = ant_clusterer(data, 15000, 0.05, 0.3, 1.5, 20, 0.3, 1000)
 cluster.initialize()
 cluster.iterations()
 
 end = time.clock()
 print("time needed", end - start)
 
-#new_data = []
-#for datum in range(0,len(data)):
-#    new_data.append([])
-#    for element in range(0,len(data[datum]) - 1):
-#        new_data[datum].append(data[datum][element])
-#        
-#data = np.array([np.array(datum) for datum in new_data]) 
-#
-#react = reactor(1.5)
-#
-#for i in range(10):
-#    print(data[i])
-#    react.push_obj(data[i])
-#    
-#print(react.find_most_dissimilar())  
-#print(react.get_reactor_center())  
-#    
-#for i in range(react.get_reactor_length()):
-#    print(react.pop_obj(0))
 
