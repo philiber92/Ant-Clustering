@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import random as rand
 import time
 from scipy.io import arff
@@ -87,14 +88,17 @@ class reactor:
         self.has_center_changed = True
         return self.item_sim_list.pop(obj_index)[1]
 
-    def get_similarity_sum(self):
-        sim_sum = 0
+    # returns mean_similarity
+    def get_similarity_mean(self):
+        sim_sum = 0.0
         if(self.has_changed == True):
             self.find_most_dissimilar()
         
         for object_index in range(0, len(self.item_sim_list)):
-            sim_sum = sim_sum + self.item_sim_list[object_index][0]
+            if (self.item_sim_list[object_index][0] > 0):
+                sim_sum = sim_sum + self.item_sim_list[object_index][0]
         
+        sim_sum = sim_sum / self.get_reactor_length()
         return sim_sum
         
     #returns similarity and index in reactor
@@ -291,7 +295,7 @@ class ant_clusterer:
                         react.push_obj(tmp.put_object())
                 if(react.get_reactor_length() > 0):
                     self.reactors.append(react)
-                print("new reactor created", iteration, react.get_reactor_length())
+                print("new reactor created", iteration, react.get_reactor_length(), "num_reactors", len(self.reactors))
                                         
                 
             #self.compare_iterations()
@@ -304,16 +308,18 @@ class ant_clusterer:
             print("reactor ",i , "size:", self.reactors[i].get_reactor_length()  )
             print(self.reactors[i].item_sim_list)
             print("")
+            
+        return self.lable_reactor_data()
         # after M Iterations all Ants with dataobject build one new reactor
         # if too much reactors combine some (done in every step)
         # Terminate if difference between two Iterations is low enough
         
     def compare_iterations(self):
         # calc current value of iteration (sum all similarities)
-        sim_sum = 0
+        sim_sum = 0.0
         for react in self.reactors:
             if(react.get_reactor_length() > 1):
-                sim_sum = sim_sum + react.get_similarity_sum()
+                sim_sum = sim_sum + react.get_similarity_mean()
         #print("compare iter: sim_sum ", sim_sum)  
                 
         # calc difference between this and last iteration
@@ -324,7 +330,7 @@ class ant_clusterer:
             self.similarity_sum = sim_sum        
         
         if(diff < 0.00001):
-            print("small diff between iterations")
+            #print("small diff between iterations")
             return True
             
         else:
@@ -363,27 +369,40 @@ class ant_clusterer:
         for i in range(0, self.reactors[num_reactor2].get_reactor_length()):
             self.reactors[num_reactor1].push_obj(self.reactors[num_reactor2].pop_obj(0))
     
+    def lable_reactor_data(self):
+        labled_data = []
+        lables = []
+        lable_num = 0
+        # each reactor is one cluster
+        for react in self.reactors:
+            # store data and lables in same order
+            for datum in range(0, react.get_reactor_length()):
+                labled_data.append(react.pop_obj(0))
+                lables.append(lable_num)
+            lable_num = lable_num + 1
+            
+        return (labled_data, lables)
+    
 
 ########################### main ################################
-data, meta = arff.loadarff('./Dataset/iris.arff')
-
-
-
-#new_data = []
-#for datum in range(0,len(data)):
-#    new_data.append([])
-#    for element in range(0,len(data[datum]) - 1):
-#        new_data[datum].append(data[datum][element])
-#        
-#new_data = np.array([np.array(datum) for datum in new_data])        
+data, meta = arff.loadarff('./Dataset/iris2.arff')       
 
 start = time.clock()
 #                      (data, num_iterations, kp, kc, alpha, number_ants, alpha1, s )
-cluster = ant_clusterer(data, 15000, 0.05, 0.3, 1.5, 20, 0.3, 1000)
+cluster = ant_clusterer(data, 2500, 0.05, 0.4, 1.5, 10, 0.4, 100)
 cluster.initialize()
-cluster.iterations()
+labled_data, lables = cluster.iterations()
 
 end = time.clock()
+print("data: ", labled_data)
+print("data: ", lables)
 print("time needed", end - start)
 
+lables = np.array([np.array(datum) for datum in lables])
 
+colors = np.array([x for x in 'bgrcmykbgrcmykbgrcmykbgrcmyk'])
+colors = np.hstack([colors] * 20)
+
+plt.scatter([i[0] for i in labled_data], [i[1] for i in labled_data], color=colors[lables].tolist(), s=10)
+
+plt.show()
