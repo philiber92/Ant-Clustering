@@ -1,0 +1,14 @@
+ant_clusterer(data, number_of_iterations, kp, kc, alpha, number_ants, alpha1, s)
+
+-data:                 Numpy-array der Datenpunkte
+-number_of_iterations: Anzahl der Durchläufe in denen sich Ameisen bewegen und Daten transportieren können
+-kp:                   Faktor zur Bestimmung der pick-up Wahrscheinlichkeit (größer = höhere Wahrscheinlichkeit)
+-kc:                   Schwellwert der Kombinationswahrscheinlichkeit von Reaktoren (wenn überschritten, Wahrscheinlichkeit = 1)
+-alpha:                Faktor zur Berechnung der Ähnlichkeit zwischen Datenpunkte (höher = größere Ähnlichkeit)
+-number_ants:          Anzahl Ameisen die Daten hin- und hertragen
+-alpha1:               Faktor zur Bestimmung der Ähnlichkeit zwischen zwei Reaktoren
+-s:                    Interval in dem neue Reaktoren aus den aktuell von Ameisen geladenen Daten gebaut werden
+
+Bsp.-Aufruf:
+
+ant_clusterer.py iris.arff 5000 0.05 0.3 2 20 0.3 200
