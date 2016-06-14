@@ -21,6 +21,7 @@ class ant_clusterer:
         self.ants = []
         self.start_reactor_index = int(0)
         self.similarity_sum = float(0)
+        self.num_data = int(0)
         
     def initialize(self):
         # create all data in numpy.array without last element (lable)
@@ -32,10 +33,10 @@ class ant_clusterer:
         
         self.data = np.array([np.array(datum) for datum in new_data])          
         
-        num_data = self.data.size / self.data[0].size      
+        self.num_data = int(self.data.size / self.data[0].size)      
         
         # random amount of reactor K <= number of data
-        k = rand.randint(1, num_data)       
+        k = rand.randint(1, self.num_data)       
         
         # create reactors
         for i in range(0, k):
@@ -221,27 +222,31 @@ class ant_clusterer:
     
     def lable_reactor_data(self):
         labled_data = []
-        lables = []
+        lables = [3]*self.num_data
+        print(len(lables))
         lable_num = 0
         # each reactor is one cluster
         for react in self.reactors:
             # store data and lables in same order
             for datum in range(0, react.get_reactor_length()):
-                labled_data.append(react.pop_obj(0))
-                lables.append(lable_num)
+                for item in range(0, len(self.data)):
+                    if( np.allclose( react.item_sim_list[datum][1] , self.data[item])):
+                        #labled_data.append(react.pop_obj(0))
+                        lables[item] = lable_num
             lable_num = lable_num + 1
             
+        print(lables)
         return (labled_data, lables)
     
 
 ########################### main ################################
 if __name__ == "__main__":
-    #data, meta = arff.loadarff('./Dataset/iris2.arff')
-    data, meta = arff.loadarff(sys.argv[1])       
+    data, meta = arff.loadarff('./Dataset/iris.arff')
+    #data, meta = arff.loadarff(sys.argv[1])       
 
     #                      (data, num_iterations, kp, kc, alpha, number_ants, alpha1, s )
-    #cluster = ant_clusterer(data, 2500, 0.05, 0.4, 5, 20, 0.3, 100)
-    cluster = ant_clusterer(data, sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6], sys.argv[7], sys.argv[8])
+    cluster = ant_clusterer(data, 2500, 0.05, 0.4, 1.5, 20, 0.3, 100)
+    #cluster = ant_clusterer(data, sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6], sys.argv[7], sys.argv[8])
     cluster.initialize()
     labled_data, lables = cluster.iterations()
     
@@ -250,6 +255,6 @@ if __name__ == "__main__":
     colors = np.array([x for x in 'bgrcmykbgrcmykbgrcmykbgrcmyk'])
     colors = np.hstack([colors] * 20)
         
-    plt.scatter([i[0] for i in labled_data], [i[1] for i in labled_data], color=colors[lables].tolist(), s=10)
+    plt.scatter([i[0] for i in data], [i[1] for i in data], color=colors[lables].tolist(), s=10)
         
     plt.show()
