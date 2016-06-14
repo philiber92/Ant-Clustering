@@ -9,7 +9,7 @@ from random import uniform
 
 
 class AntClustering:
-    """ Represents class"""
+    """ Clustering optimization using Ant Colony Clustering Algorithm."""
     def __init__(self, data, n, m, s, a, c, v, x, y):
         self.__ant_size = n
         self.__runs = m
