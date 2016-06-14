@@ -2,18 +2,25 @@ from random import uniform
 
 
 class Ant:
+    """ Represents ant that provides options to load and unload attributes. """
     def __init__(self, v):
         self.__v = uniform(0, v)
         self.__loaded = False
         self.__attribute = None
 
     def load(self, attribute):
+        """
+         Picks up specified attribute.
+        """
         if self.is_loaded:
             raise Exception("Ant is already loaded!")
         self.__attribute = attribute
         self.__loaded = True
 
     def unload(self):
+        """
+        Drops currently picked up attribute.
+        """
         if not self.is_loaded:
             raise Exception("Ant isn't currently loaded!")
         self.__attribute = None
@@ -24,11 +31,17 @@ class Ant:
         return self.__loaded
 
     def get_attribute(self):
+        """
+        :return: attribute which is currently picked up
+        """
         if not self.is_loaded:
             raise Exception("Ant isn't loaded!")
         return self.__attribute
 
     def get_coordinates(self):
+        """
+        :return: coordinate of currently picked up attribute
+        """
         attr = self.get_attribute()
         return attr.get_coordinates
 

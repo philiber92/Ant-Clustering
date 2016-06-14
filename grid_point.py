@@ -1,5 +1,11 @@
 class GridPoint:
+    """ Simple bean class that is used to represent a point in Grid class. """
     def __init__(self, x, y):
+        """
+        Creats a new instance of GridPoint.
+        :param x: x coordinate
+        :param y: y coordinate
+        """
         self.__x = x
         self.__y = y
 

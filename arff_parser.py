@@ -4,6 +4,7 @@ import numpy as np
 
 
 class ArffParser:
+    """ Provides functionality to parse arff files."""
     def __init__(self, filename):
         file_ = codecs.open(filename, 'rb', 'utf-8')
         self.__data = arff.load(file_)
@@ -12,9 +13,15 @@ class ArffParser:
         return ArffParserIter(self.__data['data'])
 
     def get_data(self):
+        """
+        :return: parsed points
+        """
         return self.__data['data']
 
     def get_data_matrix(self):
+        """
+        :return: parsed points as matrix
+        """
         data_list = []
         for point in self:
             data_list.append(point)
