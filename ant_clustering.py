@@ -97,7 +97,7 @@ class AntClustering:
 
     def __get_labels(self):
         items = self.__grid.get_all_items()
-        sorted_items = sorted(items, key=lambda x: x[1].get_label)
+        sorted_items = sorted(items, key=lambda x: x[1].get_index)
         for item in sorted_items:
             print(item[1].get_label)
 
