@@ -6,10 +6,12 @@ from grid import Grid
 from attribute import Attribute
 from ant import Ant
 from random import uniform
+from plotter import Plotter
 
 
 class AntClustering:
     """ Clustering optimization using Ant Colony Clustering Algorithm."""
+
     def __init__(self, data, n, m, s, a, c, v, x, y):
         self.__ant_size = n
         self.__runs = m
@@ -93,13 +95,15 @@ class AntClustering:
                     self.__pick(ant)
         self.__grid.drop_all()
         self.__set_labels()
-        self.__get_labels()
+        return self.__get_labels()
 
     def __get_labels(self):
         items = self.__grid.get_all_items()
         sorted_items = sorted(items, key=lambda x: x[1].get_index)
+        output = []
         for item in sorted_items:
-            print(item[1].get_label)
+            output.append(item[1])
+        return output
 
     def __set_labels(self):
         """
@@ -181,4 +185,6 @@ if __name__ == "__main__":
     clustering = AntClustering(parser.get_data_matrix(), int(sys.argv[2]), int(sys.argv[3]),
                                float(sys.argv[4]), float(sys.argv[5]), float(sys.argv[6]), float(sys.argv[7]),
                                int(sys.argv[8]), int(sys.argv[9]))
-    clustering.cluster()
+    plotter = Plotter(clustering.cluster(), 'o')
+    plotter.plot()
+    plotter.show()

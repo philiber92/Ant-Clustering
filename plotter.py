@@ -20,8 +20,8 @@ class Plotter:
         :param label: current label of attribute
         :return: hex color code
         """
-        color_code = '#'.join([random.choice('0123456789ABCDEF') for x in range(6)])
-        self.__colors[label] = '#'.join(color_code)
+        color_code = ''.join([random.choice('0123456789ABCDEF') for x in range(6)])
+        self.__colors[label] = '#' + color_code
 
     def plot(self):
         """
@@ -38,7 +38,7 @@ class Plotter:
         Plots specified attribute to 2d diagram.
         :param attr: attribute to be plotted
         """
-        plt.plot(attr.get_coordinates[0], attr.get_coordinates[1], c=self.__colors[attr.get_label], marker=self.__style)
+        plt.plot(attr.get_coordinates[0][0], attr.get_coordinates[0][1], c=self.__colors[attr.get_label], marker=self.__style)
 
     def show(self):
         """
